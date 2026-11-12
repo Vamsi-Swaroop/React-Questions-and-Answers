@@ -1,0 +1,399 @@
+## 1. Advantages of using JSX
+
+JSX lets me write UI as HTML-like syntax inside JavaScript.
+
+- Markup and logic stay together in one component, so I don't jump between files.
+- It is easier to read than a chain of `React.createElement()` calls.
+- I can put any JavaScript expression inside `{}`.
+- Babel compiles it, and it gives helpful errors when I miss a closing tag.
+- React escapes values by default, which protects against XSS.
+
+JSX is optional. Browsers can't read it, so it always gets compiled to JavaScript.
+
+---
+
+## 2. Virtual DOM vs Real DOM
+
+The real DOM is the browser's actual tree of nodes, and changing it updates the screen directly. This is slow, because every change can make the browser recalculate the layout and repaint. The virtual DOM is a lightweight copy of the UI kept as plain JavaScript objects in memory. Changing it is cheap, and it is never shown on screen directly. React only uses it to work out what needs to change.
+
+When state changes, React builds a new virtual tree, compares it with the old one, and updates only the real DOM nodes that changed.
+
+---
+
+## 3. What is a bundler? Explain webpack
+
+A bundler takes all my files (JS, CSS, images, node_modules) and combines them into a few optimized files the browser can load.
+
+Webpack is one of them. The main concepts:
+
+- **Entry**: the file where bundling starts (usually `index.js`).
+- **Output**: where the bundle goes (usually a `dist` folder).
+- **Loaders**: teach webpack to handle non-JS files (`babel-loader` for JSX, `css-loader` for CSS).
+- **Plugins**: extra jobs like generating the HTML file and minification.
+- **Dev server**: serves the app with hot reload.
+
+It builds a dependency graph from the entry file and bundles everything in it. It also supports code splitting and tree shaking.
+
+---
+
+## 4. How does Vite work?
+
+Vite has two modes:
+
+- **Dev**: no bundling of my source code. The browser loads files as native ES modules, and Vite transforms each file only when the browser asks for it. Dependencies from `node_modules` are pre-bundled once using esbuild (written in Go, very fast). This is why the server starts almost instantly, and updates (HMR) only touch the changed module.
+- **Build**: it bundles with Rollup for an optimized production output.
+
+Webpack bundles everything before serving. Vite doesn't, and that is the difference.
+
+---
+
+## 5. What is Babel?
+
+Babel is a JavaScript compiler (transpiler). It converts modern syntax into code that older browsers understand.
+
+- JSX turns into JavaScript function calls. For example, an `h1` tag with a class and some text becomes a `React.createElement` call with the tag name, a props object and the children.
+- Modern syntax (arrow functions, optional chaining) turns into older equivalents when needed.
+
+---
+
+## 6. What is a React Element?
+
+A React element is a plain JavaScript object that describes what I want on screen. It is not a real DOM node.
+
+It has a few fields: `type` (like `"h1"` or a component), `props` (including children), `key` and `ref`.
+
+Elements are immutable and cheap to create. A component is a function that returns elements.
+
+---
+
+## 7. Situations in which React re-renders a component
+
+1. Its own state changes (`setState`, `useReducer` dispatch).
+2. Its parent re-renders (even if the props are the same, unless wrapped in `React.memo`).
+3. Its props change.
+4. A context it consumes changes its value.
+5. `forceUpdate()` is called in a class component.
+6. A custom hook used inside it updates its state.
+7. In development, StrictMode renders twice on purpose.
+
+It does **not** re-render when I change a `useRef` value or mutate a normal variable.
+
+---
+
+## 8. When do we need a functional and when a class component?
+
+- **Functional**: the default for everything today. It is shorter and uses hooks.
+- **Class**: only for **error boundaries** (`componentDidCatch` / `getDerivedStateFromError` have no hook version yet), and when maintaining old code.
+
+---
+
+## 9. Functional vs class component
+
+A functional component is just a function that returns JSX, while a class component extends `React.Component` and must have a `render()` method. A functional component manages state with `useState` and handles side effects with `useEffect`. A class component keeps state in `this.state`, updates it with `this.setState`, and uses lifecycle methods such as `componentDidMount`. Class components also need care with `this` (binding event handlers), which functional components don't. For sharing logic, functional components use custom hooks, while class components rely on higher-order components and render props. Overall, functional components need less code and less boilerplate.
+
+---
+
+## 10. Why should a component name start with an uppercase letter?
+
+JSX uses the first letter to decide what to create.
+
+- A lowercase tag like `div` becomes the string `"div"`, a built-in HTML tag.
+- An uppercase tag like `Card` becomes the variable `Card`, my component.
+
+If I write `card` in lowercase, React looks for an HTML tag called "card" and my component is never rendered.
+
+---
+
+## 11. Why do we need `ReactDOM`?
+
+The `react` package only has the core logic (components, hooks, elements). It doesn't know about the browser. `react-dom` is the **renderer** that connects React to the browser DOM.
+
+I use `createRoot` from `react-dom/client` to pick the root element and call `render` on it. It also gives `createPortal`. Because the core is separate, React Native can use the same React with a different renderer.
+
+---
+
+## 12. State vs props
+
+Props are passed from a parent to a child, and they are read-only, like the arguments of a function. State is owned and managed inside the component itself, and it is changed with the setter function. It is like a variable inside a function that React remembers between renders. In both cases, a change causes the component to re-render.
+
+A child can't change its props. It can call a function the parent passed down.
+
+---
+
+## 12b. Differences between JSX and HTML
+
+- `class` becomes `className`, and `for` becomes `htmlFor`.
+- Attributes are camelCase (`onClick`, `tabIndex`).
+- `style` takes an object, not a string.
+- Every tag must be closed (`img`, `br` are written self-closing).
+- A component must return **one root element** (use a Fragment).
+- JavaScript goes inside `{}`.
+- Comments are written inside `{}` as well.
+- Event handlers get a function, not a string.
+- Inner HTML needs `dangerouslySetInnerHTML`.
+
+---
+
+## 13. Why do we use `PropTypes`?
+
+`PropTypes` checks the type of props at runtime and warns in the console (development only) if a wrong type or a missing required prop is passed. I define them on the component, for example a string title that is required and an optional number count.
+
+Today most projects use TypeScript, which catches this at compile time.
+
+---
+
+## 14. Different ways to update state using `setState`
+
+- **Direct value**: pass the new value to the setter.
+- **Functional update**: pass a function that receives the previous value and returns the new one. This always uses the latest value.
+- **Objects**: copy the old object with the spread operator, then change the field.
+- **Arrays**: add with spread, remove with `filter`, update with `map`. Never `push` or edit in place.
+
+In a class component, `this.setState` **merges** the object into the existing state, and it can take a callback that runs after the update.
+
+---
+
+## 15. "useState is asynchronous in nature": explanation
+
+The setter doesn't change the variable right away. React batches updates and re-renders afterwards, so in the same function the variable still has the old value. If I log the state right after calling the setter, I see the old value.
+
+Example of the problem: calling `setCount(count + 1)` three times in a row only adds 1, because all three calls use the same stale `count`. Calling `setCount(prev => prev + 1)` three times adds 3, because each call gets the latest value.
+
+To use the new value, I read it in the next render or inside `useEffect`.
+
+---
+
+## 16. Why should we not update state directly?
+
+Directly means things like changing a property on a state object or calling `push` on a state array.
+
+- React decides to re-render by comparing the old and new **reference**. If I mutate the same object, the reference is the same, so React may not re-render.
+- It breaks `React.memo`, `useEffect` dependencies and time-travel debugging.
+- It can cause bugs from stale data.
+
+I always create a new object or array (with spread) and pass it to the setter.
+
+---
+
+## 17. How do I handle form validation in React?
+
+I use controlled inputs, an `errors` state, and a `validate` function.
+
+1. Keep the form values in one state object and update them with one `onChange` handler that uses the input's `name`.
+2. Write a `validate` function that takes the values and returns an errors object (for example, an invalid email or a password shorter than 8 characters).
+3. On submit, call `preventDefault`, run `validate`, and store the result in the `errors` state.
+4. Only submit if the errors object is empty.
+5. Show each error message under its field.
+
+I can validate on change, on blur (when the user leaves the field), or on submit. For large forms I'd use React Hook Form.
+
+---
+
+## 18. What is the Virtual DOM and how does it work?
+
+1. **Render**: when state or props change, React calls the component and builds a new virtual tree (React elements).
+2. **Diff (reconciliation)**: it compares the new tree with the previous one. Rules: different element types mean rebuild that subtree, and `key` identifies list items.
+3. **Commit**: it applies only the differences to the real DOM, in one batch.
+
+Modern React does this with the **Fiber** architecture, which can split the work into small chunks and prioritize urgent updates.
+
+---
+
+## 19. Controlled vs uncontrolled component
+
+- **Controlled**: React state is the source of truth. The input has `value` and `onChange`, and every keystroke updates state.
+- **Uncontrolled**: the DOM keeps the value. I give it a `defaultValue` and read it with a `ref` (`ref.current.value`) when needed.
+
+Controlled is better for validation and instant feedback. Uncontrolled is simpler for file inputs and quick forms.
+
+---
+
+## 20. Why do we pass a `key` prop when displaying a list?
+
+`key` helps React identify which item is which between renders. It can then add, remove or move only the changed items and keep each item's state correct.
+
+- Use a stable unique id, such as the item's database id.
+- Avoid the array index when items can be reordered or deleted. React may reuse the wrong component and show wrong state.
+- Keys are not passed as a prop to the component.
+
+---
+
+## 21. Lifecycle methods and their use cases
+
+**Mounting**
+- `constructor`: initialize state.
+- `render`: return JSX.
+- `componentDidMount`: API calls, subscriptions, timers.
+
+**Updating**
+- `shouldComponentUpdate`: skip a re-render for performance.
+- `getSnapshotBeforeUpdate`: read the DOM before the update (e.g. scroll position).
+- `componentDidUpdate`: react to changed props or state.
+
+**Unmounting**
+- `componentWillUnmount`: cleanup (clear timers, remove listeners).
+
+**Errors**
+- `getDerivedStateFromError` and `componentDidCatch`: error boundaries.
+
+Hooks equivalent: one `useEffect` with a dependency array and an optional cleanup function covers didMount, didUpdate and willUnmount.
+
+---
+
+## 22. Reasons to use Context and how it works
+
+I use it to share data that many components need (theme, logged-in user, language) without prop drilling.
+
+How it works:
+1. Create a context with `createContext`.
+2. Wrap the part of the tree in its Provider and pass the value (for example, the theme and a function to change it).
+3. Any component below reads it with `useContext`.
+
+When the value changes, all consumers re-render. It is not meant for rapidly changing data.
+
+---
+
+## 23. Use case of `React.Fragment`
+
+A component must return a single root. A Fragment groups children without adding an extra node to the DOM. The short form is an empty tag `<>...</>`.
+
+`<React.Fragment key={id}>` is needed when I must give a `key` (e.g. inside `map`), because the short form can't take props. It is also useful in tables, where an extra `div` would make invalid HTML.
+
+---
+
+## 24. Can I loop inside JSX?
+
+Yes, with `map` that returns elements (not a `for` statement, because JSX needs expressions). For example, inside a `ul` I write `items.map(...)` returning an `li` for each item, with a `key`.
+
+I can also filter first and then map.
+
+---
+
+## 25. Advantages of using Hooks
+
+- State and lifecycle in functional components, with no classes or `this`.
+- Reuse logic with **custom hooks** instead of HOCs or render props.
+- Related code stays together (e.g. subscribe and unsubscribe in one `useEffect`).
+- Less code, easier to read and test.
+- Better minification and no wrapper hell.
+
+---
+
+## 26. Different types of hooks
+
+For state, there is `useState` for local state and `useReducer` for complex state with actions, and `useContext` reads a context value. For side effects, `useEffect` handles things like fetching, subscriptions and timers, and `useLayoutEffect` is the version that runs before the browser paints. `useRef` gives access to a DOM element or holds a mutable value that doesn't cause a re-render. For performance, `useMemo` caches a calculated value and `useCallback` caches a function. `useId` generates a unique id, and `useTransition` and `useDeferredValue` keep the UI responsive during heavy updates. `useImperativeHandle` controls what a ref exposes to the parent, and `useSyncExternalStore` subscribes to an external store. Finally, a custom hook is my own function that starts with `use` and calls other hooks.
+
+---
+
+## 27. How to use `useEffect`
+
+It takes a function (the effect) and a dependency array. The function can return a cleanup function.
+
+- Empty array: runs once after the first render.
+- Array with values: runs when any of those values change.
+- No array: runs after every render.
+
+Typical fetch pattern: define an async function inside the effect and call it. Use an `active` flag that the cleanup sets to false, so an old response doesn't update state after the component changed or unmounted (race condition).
+
+The effect callback can't be `async` directly, because it must return a cleanup function or nothing, not a Promise.
+
+---
+
+## 28. How to use `useRef`
+
+`useRef` returns an object with a `current` property that stays the same between renders, and changing it does **not** cause a re-render.
+
+1. **Access a DOM element**: attach the ref to an element and use `ref.current` (for example, to focus an input).
+2. **Store a mutable value**: timer ids, the previous value, or a render counter.
+
+---
+
+## 29. `useContext` hook
+
+It reads the nearest Provider's value for a context. It replaces the older `Context.Consumer` component, and it is shorter. A component using it re-renders whenever the context value changes.
+
+---
+
+## 30. `useReducer` hook
+
+It is `useState` for complex state, where the next state depends on an **action**.
+
+- I write a **reducer**, a pure function that takes the current state and an action and returns the new state (usually with a switch on the action type).
+- `useReducer(reducer, initialState)` gives me the state and a `dispatch` function.
+- I update state by calling `dispatch` with an action like `{ type: "add", item }`.
+
+I use it when there are many related state values or many different update types (e.g. a cart).
+
+---
+
+## 31. Hooks to manage state
+
+- `useState`: simple local state.
+- `useReducer`: complex state with actions.
+- `useContext`: share state across components (combined with the two above).
+- `useRef`: a value that persists but doesn't trigger a render.
+- `useSyncExternalStore`: subscribe to an external store (used by libraries like Redux).
+
+---
+
+## 32. DOM element vs React element
+
+A DOM element is a real node in the browser. It is heavy, with many properties and methods, it is mutable, and changing it updates the screen directly. A React element is just a plain JavaScript object that describes a node. It is lightweight, with only `type`, `props`, `key` and `ref`, and it is immutable. To change the UI, React creates a new element and then updates the real DOM itself.
+
+---
+
+## 33. What happens when a runtime error occurs in JSX? How do I fix it?
+
+If a component throws while rendering (for example, reading a property of `undefined`), React unmounts the **whole component tree**, so the user sees a blank screen.
+
+Fixes:
+- Defensive code: optional chaining, default values, checking before rendering.
+- **Error boundary**: a class component with `getDerivedStateFromError` / `componentDidCatch` that shows a fallback UI. I can wrap parts of the app so one failure doesn't take the whole page down.
+
+Error boundaries don't catch errors in event handlers, async code (`setTimeout`, promises) or the boundary itself. Those need `try/catch`.
+
+---
+
+## 34. Rules of hooks
+
+1. Call hooks only at the **top level** of a component or custom hook. Not inside loops, conditions or nested functions.
+2. Call hooks only from React function components or custom hooks, not from normal JS functions.
+3. Custom hook names must start with `use`.
+
+The reason: React identifies each hook by the **order** it is called in. If the order changes between renders, state gets mixed up.
+
+---
+
+## 35. Why can we put hooks in an `if` statement?
+
+We **can't**. This is a trick question.
+
+If I call `useState` inside an `if`, the order of hooks changes when the condition changes, which breaks React's tracking and throws an error. The condition should go **inside** the hook instead (for example, an `if` inside the `useEffect` callback).
+
+An early `return` before a hook has the same problem, so all hooks go before any conditional return.
+
+---
+
+## 36. Advantage of `React.StrictMode`
+
+It is a development-only wrapper that has no UI and no effect in production. I wrap `<App />` with it in the root.
+
+- Renders components **twice** to find impure rendering and side effects.
+- Mounts, unmounts and remounts effects once to expose missing **cleanup** functions.
+- Warns about deprecated APIs and unsafe lifecycle methods.
+
+That is why `console.log` and API calls seem to run twice in development.
+
+---
+
+## 37. How to create a production build
+
+With Vite, I run `npm run build`, which creates the `dist` folder. `npm run preview` lets me test the build locally. With Create React App, it is `npm run build` and the output goes in the `build` folder.
+
+The build minifies code, removes unused code (tree shaking), splits bundles, adds hashes to file names for caching, and removes development warnings. The output folder is deployed to a static host (Netlify, Vercel, GitHub Pages or Nginx). Environment values come from `.env.production`.
+
+---
+
+## 38. Development vs Production
+
+Development mode runs with `npm run dev` and is served by the dev server. The code is large, readable and unminified, with hot reload (HMR), detailed warnings, StrictMode checks, PropTypes checks and source maps, so it is easy to debug but slower and bigger. Production is created with `npm run build` and is served as static files. The code is minified, optimized and tree-shaken, the development warnings are removed, there is no HMR, and source maps are optional. The result is fast and small.
