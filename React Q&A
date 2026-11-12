@@ -92,9 +92,6 @@ Function components usually need less code and are the recommended choice for ne
 
 JSX uses the first letter to tell the difference between HTML tags and React components.
 
-- <div /> is treated as a built-in HTML element.
-- <Card /> is treated as a React component named Card.
-
 So, component names should start with a capital letter.
 
 ## 11. Why do we need ReactDOM?
